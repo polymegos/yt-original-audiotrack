@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name            YT Original Audiotrack
-// @version         0.1.0
-// @description     Overrides automatic use of generated, translated audiotracks. Resets to original audio.
+// @name            YouTube Audiotrack Reset
+// @version         0.1.1
+// @description     Overrides automatic use of generated, translated audiotracks on YouTube videos. Resets to original audio.
 // @author          PolyMegos (https://github.com/polymegos)
 // @namespace       https://github.com/polymegos/yt-original-audiotrack/
 // @supportURL      https://github.com/polymegos/yt-original-audiotrack/issues
