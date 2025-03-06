@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name            YouTube Audiotrack Reset
-// @version         0.1.2
+// @version         0.1.3
 // @description     Overrides automatic use of generated, translated audiotracks on YouTube videos. Resets to original audio.
 // @author          PolyMegos (https://github.com/polymegos)
 // @namespace       https://github.com/polymegos/yt-original-audiotrack/
@@ -12,9 +12,7 @@
 // @match           *://music.youtube.com/*
 // @grant           none
 // @run-at          document-start
-// @compatible      chrome
 // @compatible      firefox
-// @compatible      opera
 // @compatible      edge
 // @compatible      safari
 // ==/UserScript==
@@ -92,7 +90,7 @@
 
                 // Click the "Original" option
                 const originalOption = Array.from(audioTrackMenu.querySelectorAll('.ytp-menuitem'))
-                    .find(item => item.textContent.includes('Original'));
+                    .find(item => item.textContent.toLowerCase().includes('original'));
 
                 if (originalOption) {
                     clickElement(originalOption);
