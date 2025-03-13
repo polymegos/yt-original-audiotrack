@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name            YouTube Audiotrack Reset
-// @version         0.1.4
+// @version         0.1.5
 // @description     Overrides automatic use of generated, translated audiotracks on YouTube videos. Resets to original audio.
 // @author          PolyMegos (https://github.com/polymegos)
 // @namespace       https://github.com/polymegos/yt-original-audiotrack/
@@ -23,10 +23,17 @@
 
     const DESKTOP_REDIR_ENABLED = 'yt_audiotrack_desktop_redirect_enabled';
 
-    function isMobile() {
+    function isMobileYT() {
         return (window.location.hostname === 'm.youtube.com' ||
         (window.location.hostname === 'www.youtube.com' &&
         (document.documentElement.classList.contains('mobile'))));
+    }
+
+    function isMobileDevice() {
+        const userAgent = navigator.userAgent || window.opera;
+        const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|mobile|CriOS/i;
+        const touchSupported = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+        return mobileRegex.test(userAgent) || touchSupported;
     }
 
     function redirectToDesktop() {
@@ -36,7 +43,7 @@
 
         // Look whether desktop param already in URL
         const hasDesktopParam = window.location.search.includes('app=desktop');
-        if (isMobile() && !hasDesktopParam) {
+        if (isMobileYT() && !hasDesktopParam) {
             // Appending desktop parameter for new URL
             let newUrl = window.location.href;
             if (newUrl.includes('?')) {
@@ -100,7 +107,7 @@
 
     function createToggleSwitch() {
         // Only create the switch if we're on a mobile device
-        if (!isMobile()) {
+        if (!isMobileDevice()) {
             return;
         }
 
@@ -126,6 +133,7 @@
             // Create the label
             const label = document.createElement('label');
             label.textContent = '';
+            label.title = GM_getValue(DESKTOP_REDIRECT_ENABLED, true) ? 'Disable desktop redirect' : 'Enable desktop redirect';
             label.style.cssText = `
                 margin-right: 5px;
                 color: #aaa;
@@ -189,7 +197,7 @@
                 slider.style.backgroundColor = this.checked ? '#FF0000' : '#ccc';
 
                 // If switched to ON, reload the page to apply desktop redirect
-                if (this.checked && isMobile() && !window.location.search.includes('app=desktop')) {
+                if (this.checked && isMobileYT() && !window.location.search.includes('app=desktop')) {
                     window.location.reload();
                 }
             });
