@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name            YouTube Audiotrack Reset
-// @version         0.1.3
+// @version         0.1.4
 // @description     Overrides automatic use of generated, translated audiotracks on YouTube videos. Resets to original audio.
 // @author          PolyMegos (https://github.com/polymegos)
 // @namespace       https://github.com/polymegos/yt-original-audiotrack/
@@ -19,6 +19,29 @@
 
 (function() {
     'use strict';
+
+    function redirectToDesktop() {
+        // Check if we're on m.youtube.com or in a mobile setting
+        const isMobile = window.location.hostname === 'm.youtube.com' || 
+                                (window.location.hostname === 'www.youtube.com' && 
+                                (document.documentElement.classList.contains('mobile')));
+        // Look whether desktop param already in URL
+        const hasDesktopParam = window.location.search.includes('app=desktop');
+        if (isMobile && !hasDesktopParam) {
+            // Appending desktop parameter for new URL
+            let newUrl = window.location.href;
+            if (newUrl.includes('?')) {
+                newUrl += '&app=desktop';
+            } else {
+                newUrl += '?app=desktop';
+            }
+            // Redirect to desktop version
+            console.log('Redirecting to desktop version of YouTube...');
+            window.location.href = newUrl;
+            return true; // redirect
+        }
+        return false; // no redirect needed
+    }
 
     // Wait for an element to appear in the DOM
     function waitForElement(selector, timeout = 10000) {
@@ -47,7 +70,7 @@
         }
     }
 
-    // Wait until YouTube is not showing an ad (i.e. ad container is gone)
+    // Wait until no ad shown
     function waitForNoAds(timeout = 10000) {
         return new Promise((resolve, reject) => {
             const player = document.querySelector('.html5-video-player');
@@ -69,6 +92,10 @@
     // Main function to reset the audiotrack
     async function checkAudiotrack() {
         try {
+            if (redirectToDesktop()) {
+                return; // Early return to redirect to desktop view
+            }
+
             // Wait for the video element and ensure no ad is playing
             await waitForElement('video');
             await waitForNoAds();
