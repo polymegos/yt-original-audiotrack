@@ -295,6 +295,8 @@
 
     // Try to create the toggle as early as possible
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
-        setTimeout(createToggleSwitch, 1000);
+        setTimeout(createToggleSwitch, 500);
+        setTimeout(createToggleSwitch, 1500);
+        setTimeout(createToggleSwitch, 10000);
     }
 })();
