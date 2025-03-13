@@ -10,7 +10,8 @@
 // @match           *://www.youtube-nocookie.com/*
 // @match           *://m.youtube.com/*
 // @match           *://music.youtube.com/*
-// @grant           none
+// @grant           GM_setValue
+// @grant           GM_getValue
 // @run-at          document-start
 // @compatible      firefox
 // @compatible      edge
@@ -20,14 +21,22 @@
 (function() {
     'use strict';
 
+    const DESKTOP_REDIR_ENABLED = 'yt_audiotrack_desktop_redirect_enabled';
+
+    function isMobile() {
+        return (window.location.hostname === 'm.youtube.com' ||
+        (window.location.hostname === 'www.youtube.com' &&
+        (document.documentElement.classList.contains('mobile'))));
+    }
+
     function redirectToDesktop() {
-        // Check if we're on m.youtube.com or in a mobile setting
-        const isMobile = window.location.hostname === 'm.youtube.com' || 
-                                (window.location.hostname === 'www.youtube.com' && 
-                                (document.documentElement.classList.contains('mobile')));
+        // Check if redirection is enabled in settings
+        const redirectEnabled = GM_getValue(DESKTOP_REDIR_ENABLED, true);
+        if (!redirectEnabled) return false;
+
         // Look whether desktop param already in URL
         const hasDesktopParam = window.location.search.includes('app=desktop');
-        if (isMobile && !hasDesktopParam) {
+        if (isMobile() && !hasDesktopParam) {
             // Appending desktop parameter for new URL
             let newUrl = window.location.href;
             if (newUrl.includes('?')) {
@@ -89,6 +98,134 @@
         });
     }
 
+    function createToggleSwitch() {
+        // Only create the switch if we're on a mobile device
+        if (!isMobile()) {
+            return;
+        }
+
+        // Wait for the search bar container to be available
+        waitForElement('#masthead-container').then(container => {
+            // Check if the switch already exists to prevent duplicates
+            if (document.querySelector('.yt-audiotrack-switch-container')) {
+                return;
+            }
+
+            // Create the switch container
+            const switchContainer = document.createElement('div');
+            switchContainer.className = 'yt-audiotrack-switch-container';
+            switchContainer.style.cssText = `
+                display: flex;
+                align-items: center;
+                margin-left: 10px;
+                margin-right: 10px;
+                font-size: 12px;
+                padding: 0 5px;
+            `;
+
+            // Create the label
+            const label = document.createElement('label');
+            label.textContent = '';
+            label.style.cssText = `
+                margin-right: 5px;
+                color: #aaa;
+            `;
+
+            // Create the switch
+            const toggleSwitch = document.createElement('label');
+            toggleSwitch.className = 'yt-audiotrack-switch';
+            toggleSwitch.style.cssText = `
+                position: relative;
+                display: inline-block;
+                width: 36px;
+                height: 20px;
+            `;
+
+            // Create the checkbox
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = GM_getValue(DESKTOP_REDIR_ENABLED, true);
+            checkbox.style.cssText = `
+                opacity: 0;
+                width: 0;
+                height: 0;
+            `;
+
+            // Create the slider
+            const slider = document.createElement('span');
+            slider.className = 'yt-audiotrack-slider';
+            slider.style.cssText = `
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #ccc;
+                transition: .4s;
+                border-radius: 34px;
+            `;
+
+            // Add the slider button
+            const sliderButton = document.createElement('span');
+            sliderButton.style.cssText = `
+                position: absolute;
+                content: "";
+                height: 16px;
+                width: 16px;
+                left: 2px;
+                bottom: 2px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+                transform: ${checkbox.checked ? 'translateX(16px)' : 'translateX(0)'};
+            `;
+            slider.appendChild(sliderButton);
+
+            // Add event listener
+            checkbox.addEventListener('change', function() {
+                GM_setValue(DESKTOP_REDIR_ENABLED, this.checked);
+                sliderButton.style.transform = this.checked ? 'translateX(16px)' : 'translateX(0)';
+                slider.style.backgroundColor = this.checked ? '#FF0000' : '#ccc';
+
+                // If switched to ON, reload the page to apply desktop redirect
+                if (this.checked && isMobile() && !window.location.search.includes('app=desktop')) {
+                    window.location.reload();
+                }
+            });
+
+            // Set initial color
+            slider.style.backgroundColor = checkbox.checked ? '#FF0000' : '#ccc';
+
+            // Assemble the switch
+            toggleSwitch.appendChild(checkbox);
+            toggleSwitch.appendChild(slider);
+
+            // Assemble the container
+            switchContainer.appendChild(label);
+            switchContainer.appendChild(toggleSwitch);
+
+            // Find the right place to insert the switch
+            const targetLocation = document.querySelector('#end');
+            if (targetLocation) {
+                // Insert before the end container with YouTube's buttons
+                targetLocation.insertBefore(switchContainer, targetLocation.firstChild);
+            } else {
+                // Fallback: try to insert into the masthead container
+                const searchBox = document.querySelector('#masthead-container #search');
+                if (searchBox) {
+                    // Insert after the search box
+                    searchBox.parentNode.insertBefore(switchContainer, searchBox.nextSibling);
+                } else {
+                    // Final fallback: insert at the end of the masthead container
+                    container.appendChild(switchContainer);
+                }
+            }
+        }).catch(error => {
+            console.error('Error creating toggle switch:', error);
+        });
+    }
+
     // Main function to reset the audiotrack
     async function checkAudiotrack() {
         try {
@@ -137,10 +274,19 @@
     }
 
     // Initial trigger on page load
-    checkAudiotrack();
-
-    // Re-run the script after SPA navigation events (when switching videos)
-    document.addEventListener('yt-navigate-finish', () => {
+    window.addEventListener('yt-navigate-finish', function() {
+        createToggleSwitch();
         checkAudiotrack();
     });
+
+    // Make sure we run on the initial page load too
+    window.addEventListener('load', function() {
+        createToggleSwitch();
+        checkAudiotrack();
+    });
+
+    // Try to create the toggle as early as possible
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(createToggleSwitch, 1000);
+    }
 })();
